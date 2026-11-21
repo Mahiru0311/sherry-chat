@@ -151,8 +151,34 @@ struct MemoryPage: View {
 }
 
 struct SoulPage: View {
-    @Environment(AgentProfile.self) private var profile; @State private var draft=""
-    var body: some View { TextEditor(text:$draft).padding().navigationTitle("人格").navigationBarTitleDisplayMode(.inline).toolbar { Button("保存") { profile.soul=draft } }.onAppear { draft=profile.soul } }
+    @Environment(AgentProfile.self) private var profile
+    @State private var draft = ""
+    var body: some View {
+        Form {
+            Section("当前人格") {
+                TextEditor(text: $draft).frame(minHeight: 220)
+                Button("保存人格") { profile.soul = draft }
+            }
+            if let proposal = profile.soulDraft {
+                Section("Agent 提议") {
+                    Text(proposal)
+                    HStack {
+                        Button("采用") { profile.approveSoulDraft(); draft = profile.soul }
+                        Spacer()
+                        Button("忽略", role: .destructive) { profile.rejectSoulDraft() }
+                    }
+                }
+            }
+            Section {
+                Button("将当前编辑存为待审草稿") { profile.proposeSoulDraft(draft) }
+            } footer: {
+                Text("Agent 的人格变化先进入草稿，经你确认后才生效；进行中的对话保持原有人格。")
+            }
+        }
+        .navigationTitle("人格")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear { draft = profile.soul }
+    }
 }
 
 struct ModelPage: View {

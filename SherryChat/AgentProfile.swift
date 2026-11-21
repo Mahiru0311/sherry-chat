@@ -38,6 +38,11 @@ final class AgentProfile {
         didSet { saveSoul() }
     }
 
+    /// Agent 根据对话提出的人格调整只先形成草稿；用户批准后才进入 Soul。
+    var soulDraft: String? {
+        didSet { UserDefaults.standard.set(soulDraft, forKey: Keys.soulDraft) }
+    }
+
     /// 雪莉的名字（记忆页“更换名称”改的）：默认 Sherry，
     /// 显示在顶栏名字牌和个人页上，也进 AI 的 system prompt。
     var displayName: String {
@@ -149,6 +154,7 @@ final class AgentProfile {
     init() {
         let defaults = UserDefaults.standard
         self.soul = defaults.string(forKey: Keys.soul) ?? Self.defaultSoul
+        self.soulDraft = defaults.string(forKey: Keys.soulDraft)
         self.displayName = defaults.string(forKey: Keys.displayName) ?? "Sherry"
         self.avatarPath = defaults.string(forKey: Keys.avatarPath)
         self.wallpaperPath = defaults.string(forKey: Keys.wallpaperPath)
@@ -292,6 +298,31 @@ final class AgentProfile {
         guard !trimmed.isEmpty else { return }
         memories.append(MemoryNote(text: trimmed))
     }
+
+    /// 轻量本地自动记忆：只吸收用户明确表达的稳定偏好或身份事实，
+    /// 去重后写入；后续接模型时可替换为结构化 reviewer。
+    func reviewUserMessageForMemory(_ text: String) {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let markers = ["我喜欢", "我不喜欢", "我叫", "我是", "请记住", "我希望", "我习惯"]
+        guard clean.count >= 4, clean.count <= 100,
+              markers.contains(where: clean.contains),
+              !memories.contains(where: { $0.text == clean }) else { return }
+        memories.append(MemoryNote(text: clean))
+    }
+
+    func proposeSoulDraft(_ text: String) {
+        let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty, clean != soul else { return }
+        soulDraft = clean
+    }
+
+    func approveSoulDraft() {
+        guard let draft = soulDraft else { return }
+        soul = draft
+        soulDraft = nil
+    }
+
+    func rejectSoulDraft() { soulDraft = nil }
 
     func updateMemory(id: UUID, text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -480,6 +511,7 @@ extension AgentProfile {
 
     private enum Keys {
         static let soul = "agent.soul"
+        static let soulDraft = "agent.soulDraft"
         static let soulUpdatedAt = "agent.soulUpdatedAt"
         static let displayName = "agent.displayName"
         static let avatarPath = "agent.avatarPath"

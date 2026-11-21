@@ -836,6 +836,7 @@ struct ChatView: View {
             attachmentError = "以下附件没能存下来，已按原位置发出，重启手机后可能打不开：\(failed.joined(separator: "、"))。"
         }
         onUserSent(trimmed)
+        profile.reviewUserMessageForMemory(trimmed)
         let messageID = UUID()
         // 回复态跟着这条消息走：发出去就清掉，预览栏立刻收起。
         let replyID = replyingTo
