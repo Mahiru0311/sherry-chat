@@ -49,6 +49,13 @@ final class AgentProfile {
         didSet { UserDefaults.standard.set(displayName, forKey: Keys.displayName) }
     }
 
+    var region: String {
+        didSet { UserDefaults.standard.set(region, forKey: Keys.region) }
+    }
+
+    /// 稳定的 Agent 号；首次启动生成，之后不随进程或改名变化。
+    let agentID: String
+
     /// 头像文件在 Application Support 里的路径（只存路径串，
     /// 不存图本身）。没换过就是 nil，画默认的 sparkles 蓝圆。
     var avatarPath: String? {
@@ -156,6 +163,14 @@ final class AgentProfile {
         self.soul = defaults.string(forKey: Keys.soul) ?? Self.defaultSoul
         self.soulDraft = defaults.string(forKey: Keys.soulDraft)
         self.displayName = defaults.string(forKey: Keys.displayName) ?? "Sherry"
+        self.region = defaults.string(forKey: Keys.region) ?? "未设置"
+        if let savedID = defaults.string(forKey: Keys.agentID) {
+            self.agentID = savedID
+        } else {
+            let generated = String(Int.random(in: 1_000_000...9_999_999))
+            defaults.set(generated, forKey: Keys.agentID)
+            self.agentID = generated
+        }
         self.avatarPath = defaults.string(forKey: Keys.avatarPath)
         self.wallpaperPath = defaults.string(forKey: Keys.wallpaperPath)
         let savedScale = defaults.double(forKey: Keys.wallpaperScale)
@@ -387,6 +402,9 @@ final class AgentProfile {
         hasAPIKey = true
     }
 
+    /// 设置页只用它判断是否已有密钥；真实内容始终留在 Keychain。
+    var maskedAPIKey: String { hasAPIKey ? "••••••••••••" : "" }
+
     func deleteAPIKey() {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -514,6 +532,8 @@ extension AgentProfile {
         static let soulDraft = "agent.soulDraft"
         static let soulUpdatedAt = "agent.soulUpdatedAt"
         static let displayName = "agent.displayName"
+        static let region = "agent.region"
+        static let agentID = "agent.id"
         static let avatarPath = "agent.avatarPath"
         static let wallpaperPath = "agent.wallpaperPath"
         static let wallpaperScale = "agent.wallpaperScale"

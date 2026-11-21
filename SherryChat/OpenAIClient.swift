@@ -48,6 +48,26 @@ actor OpenAIClient {
         self.session = session
     }
 
+    func completeChat(
+        baseURL: String,
+        model: String,
+        apiKey: String,
+        messages: [ChatAPIMessage]
+    ) async throws -> String {
+        guard let url = URL(string: baseURL + "/v1/chat/completions") else { throw AIError.badURL }
+        var request = URLRequest(url: url, timeoutInterval: 60)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(ChatCompletionsRequest(model: model, messages: messages, stream: false))
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw AIError.badResponse }
+        switch http.statusCode { case 200: break; case 401: throw AIError.unauthorized; case 404: throw AIError.notFound; case 429: throw AIError.rateLimited; case 400: throw AIError.badRequest; default: throw AIError.http(http.statusCode) }
+        guard let content = try? JSONDecoder().decode(ChatCompletion.self, from: data).choices.first?.message.content,
+              !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw AIError.emptyReply }
+        return content
+    }
+
     func streamChat(
         baseURL: String,
         model: String,
@@ -121,6 +141,14 @@ actor OpenAIClient {
 }
 
 /// POST /v1/chat/completions 的请求体。
+private struct ChatCompletion: Decodable {
+    struct Choice: Decodable {
+        struct Message: Decodable { var content: String }
+        var message: Message
+    }
+    var choices: [Choice]
+}
+
 private struct ChatCompletionsRequest: Encodable {
     var model: String
     var messages: [ChatAPIMessage]

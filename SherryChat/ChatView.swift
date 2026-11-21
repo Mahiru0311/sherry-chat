@@ -352,10 +352,8 @@ struct ChatView: View {
                 // 这个 SwiftUI 修饰器只是顺手也挂上。
                 .nativeScrollEdgeEffectSoft()
                 .background(ScrollEdgeEffectConfigurator())
-                // 底栏完全悬浮：列表 frame 用负 bottom padding
-                // 往下伸到底栏后面去，内容直接从玻璃下面滑过；
-                // 底栏自己还在 flow 里（没改成 overlay），键盘行为不变。
-                .padding(.bottom, -bottomAreaHeight)
+                // 输入栏留在布局流内，由系统 TabView/键盘安全区共同管理。
+                // 不再负 padding 伸到标签栏后面，避免与原生 Liquid Glass Tab Bar 重叠。
                 // 新消息进来、人在上面翻历史时才记未读；
                 // 自己发的、或已经在底部的都不记。
                 // 挂在这里不挂上面：FluidGroup 自己的修饰器
