@@ -7,8 +7,9 @@ final class ConversationStore {
 
     init() {
         let loaded = Self.load()
-        previews = loaded.isEmpty ? [.sample] : loaded
-        activeID = previews.first?.id ?? ConversationPreview.sample.id
+        let initial = loaded.isEmpty ? [ConversationPreview.sample] : loaded
+        previews = initial
+        activeID = initial.first?.id ?? ConversationPreview.sample.id
     }
 
     @discardableResult
