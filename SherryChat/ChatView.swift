@@ -10,6 +10,8 @@ import UniformTypeIdentifiers
 /// 滚动引擎 + 自己画的输入栏。顶栏玻璃只属于名字牌，顶栏上面是
 /// iOS 26 原生 Scroll Edge Effect（渐变模糊）。
 struct ChatView: View {
+    var onNewChat: () -> Void = {}
+    var onNavigationCollapse: () -> Void = {}
     @State private var conversation = Conversation()
     /// 个人页那份 AgentProfile（App 入口注入）：send() 传给
     /// Conversation，配齐了才走真 AI；没配齐走假回复。
@@ -39,9 +41,6 @@ struct ChatView: View {
     @State private var previewURL: URL?
     @State private var playingVideo: IdentifiableURL?
     @Environment(ToolsStore.self) private var toolsStore
-    @State private var showDetails = false
-    @State private var showNewChat = false
-    @State private var showTools = false
     /// 附件出问题时给用户的一句明确提示（选不上 / 拷不动 / 保存失败），
     /// 不许悄悄丢附件。
     @State private var attachmentError: String?
@@ -220,20 +219,6 @@ struct ChatView: View {
             .fullScreenCover(item: $playingVideo) { video in
                 videoPlayerView(for: video.url)
             }
-            // 点头像进个人页（Dolos 2026-11-18：照 Muse App 的个人页，
-            // 有 SOUL、记忆、API 接入三个菜单）。原来那个占位的
-            // 联系人卡片 sheet 废了，换成全屏的个人页。
-            // onDismiss：记忆页点了“更换头像/更换名称”回来时
-            // （step 80），输入框上面显示着要换什么，直接弹起键盘。
-            .sheet(isPresented: $showNewChat) { NewChatView { _ in showNewChat = false } }
-            .fullScreenCover(isPresented: $showDetails, onDismiss: {
-                if profile.pendingAvatarChange || profile.pendingNameChange {
-                    inputFocused = true
-                }
-            }) {
-                ProfileView()
-                    .environment(toolsStore)
-            }
 
     }
 
@@ -310,6 +295,7 @@ struct ChatView: View {
                 // 跟底开关：离底 < 100pt 才跟，翻上去看历史时不抢滚动；
                 // 值没变就不写，免得每次滚动几何变化都触发一次 @State 赋值。
                 .onTiledScrollGeometryChange { geometry in
+                    if geometry.pointsFromBottom > 24 { onNavigationCollapse() }
                     let nearBottom = geometry.pointsFromBottom < 100
                     lastPointsFromBottom = geometry.pointsFromBottom
                     if scrollPosition.autoScrollsToBottomOnAppend != nearBottom {
@@ -669,45 +655,29 @@ struct ChatView: View {
     /// 头像压名字牌那 8pt overlap 没动。
     private var headerView: some View {
         ZStack {
-            Button { showDetails = true } label: {
-                VStack(spacing: 3) {
-                    avatarView(size: 52)
-                    HStack(spacing: 3) {
-                        Text(profile.displayName)
-                            .font(.subheadline.weight(.semibold))
-                            .lineLimit(1)
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.secondary)
-                    }
-                    Text(conversation.isTyping ? "正在输入…" : "在线")
-                        .font(.caption2)
-                        .foregroundStyle(conversation.isTyping ? Color.secondary : Color.green)
-                }
+            VStack(spacing: 4) {
+                avatarView(size: 58)
+                Text(profile.displayName)
+                    .font(.headline.weight(.semibold))
+                    .lineLimit(1)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 5)
+                    .glassCapsuleFill()
+                Text(conversation.isTyping ? "正在输入…" : "在线")
+                    .font(.caption2)
+                    .foregroundStyle(conversation.isTyping ? Color.secondary : Color.green)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("打开联系人详情")
 
             HStack {
                 Spacer()
-                HStack(spacing: 8) {
-                    Button { showNewChat = true } label: {
-                        Image(systemName: "square.and.pencil")
-                            .font(.system(size: 16, weight: .bold))
-                            .frame(width: 38, height: 38)
-                            .glassCircleFill()
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("新增聊天")
-                    Button { showDetails = true } label: {
-                        Image(systemName: "info")
-                            .font(.system(size: 16, weight: .bold))
-                            .frame(width: 38, height: 38)
-                            .glassCircleFill()
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("联系人详情")
+                Button(action: onNewChat) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 17, weight: .bold))
+                        .frame(width: 42, height: 42)
+                        .glassCircleFill()
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("新增聊天")
             }
         }
         .padding(.horizontal, 14)

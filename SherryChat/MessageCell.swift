@@ -95,14 +95,29 @@ struct MessageCell: TiledCellContent {
                     // （里面是 Button，吃掉祖先的长按手势）永远震不到，
                     // 还可能和根上那次叠成两下。
                     .scaleEffect(isPressing ? 0.97 : 1)
-                    .onLongPressGesture(minimumDuration: 0.45, pressing: { pressing in
-                        withAnimation(.easeInOut(duration: 0.15)) { isPressing = pressing }
-                        if pressing {
-                            onPressStart(message)
-                        } else {
-                            onPressEnd()
+                    .contextMenu {
+                        Button { UIPasteboard.general.string = message.text } label: {
+                            Label("复制", systemImage: "doc.on.doc")
                         }
-                    }, perform: {})
+                        Button { onSwipeReply(message) } label: {
+                            Label("回复", systemImage: "arrowshape.turn.up.left")
+                        }
+                    } preview: {
+                        MessageBubbleView(
+                            message: item.message,
+                            position: item.position,
+                            replyTo: item.replyTo,
+                            isHighlighted: false,
+                            sherryName: sherryName,
+                            onVideoTap: onVideoTap,
+                            onFileTap: onFileTap,
+                            onQuoteTap: onQuoteTap,
+                            onPressStart: { _ in },
+                            onPressEnd: {}
+                        )
+                        .padding(12)
+                        .glassPanelFill(cornerRadius: 24)
+                    }
                     // 右滑 = 回复（step 72）：气泡跟手右移（最多 60pt），
                     // 左边露一个回复箭头；松手时滑过 60pt 就震一下、
                     // 设回复，没滑够就弹回去。simultaneousGesture：

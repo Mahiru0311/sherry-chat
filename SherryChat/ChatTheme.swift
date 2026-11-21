@@ -133,7 +133,7 @@ enum ChatTheme {
     /// 顶栏内容高（不含状态栏）：统一采用 iMessage 的紧凑导航栏。
     /// 头像、名称和在线状态都在同一行，详情与工具按钮位于右侧。
     static var headerHeight: CGFloat {
-        return 92
+        return 112
     }
 
     /// 对比版顶栏底：Telegram 的顶栏是实色条（浅色白、深色 #17212B），
