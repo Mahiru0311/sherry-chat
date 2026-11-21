@@ -42,34 +42,12 @@ struct ToolPickerSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    Text("工具会在需要时由 Sherry 提议使用。你可以随时关闭，也可以在每次调用前确认。")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .listRowBackground(Color.clear)
-                }
-                ForEach(ToolDescriptor.Source.allCases, id: \.self) { source in
-                    Section(source == .skill ? "Skills" : "MCP 服务") {
-                        ForEach(store.tools.filter { $0.source == source }) { tool in
-                            Button { store.toggle(tool.id) } label: {
-                                HStack(spacing: 12) {
-                                    Image(systemName: tool.icon)
-                                        .font(.title3)
-                                        .foregroundStyle(tool.isEnabled ? .tint : .secondary)
-                                        .frame(width: 28)
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(tool.name).foregroundStyle(.primary)
-                                        Text(tool.summary).font(.caption).foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    Image(systemName: tool.isEnabled ? "checkmark.circle.fill" : "circle")
-                                        .foregroundStyle(tool.isEnabled ? .tint : .secondary)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
+                Text("工具会在需要时由 Sherry 提议使用。你可以随时关闭，也可以在每次调用前确认。")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .listRowBackground(Color.clear)
+                toolSection(.skill, title: "Skills")
+                toolSection(.mcp, title: "MCP 服务")
             }
             .navigationTitle("工具与 Skills")
             .navigationBarTitleDisplayMode(.inline)
@@ -80,6 +58,30 @@ struct ToolPickerSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    @ViewBuilder
+    private func toolSection(_ source: ToolDescriptor.Source, title: String) -> some View {
+        Section(title) {
+            ForEach(store.tools.filter { $0.source == source }) { tool in
+                Button { store.toggle(tool.id) } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: tool.icon)
+                            .font(.title3)
+                            .foregroundStyle(tool.isEnabled ? Color.accentColor : Color.secondary)
+                            .frame(width: 28)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(tool.name).foregroundStyle(.primary)
+                            Text(tool.summary).font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: tool.isEnabled ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(tool.isEnabled ? Color.accentColor : Color.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 }
 

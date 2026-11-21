@@ -684,7 +684,7 @@ struct ChatView: View {
                     }
                     Text(conversation.isTyping ? "正在输入…" : "在线")
                         .font(.caption2)
-                        .foregroundStyle(conversation.isTyping ? .secondary : .green)
+                        .foregroundStyle(conversation.isTyping ? Color.secondary : Color.green)
                 }
             }
             .buttonStyle(.plain)
