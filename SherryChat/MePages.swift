@@ -35,7 +35,7 @@ struct MeView: View {
                 case .plugins: PluginsPage().environment(tools)
                 case .memory: MemoryPage()
                 case .soul: SoulPage()
-                case .model: ModelSettingsPage()
+                case .model: ModelSettingsView()
                 }
             }
         }

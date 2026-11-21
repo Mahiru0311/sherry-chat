@@ -61,7 +61,7 @@ struct AppShell: View {
             Tab("会话", systemImage: "bubble.left.and.bubble.right.fill", value: .conversations) {
                 ConversationListView(previews: store.previews, onSelect: { store.select($0); selection = .chat }, onDelete: store.delete)
             }
-            Tab("动态", systemImage: "sparkles", value: .mood) { ActivityFeedView() }
+            Tab("动态", systemImage: "sparkles", value: .mood) { MoodView() }
             Tab("我的", systemImage: "person.crop.circle.fill", value: .me) { MeView() }
         }
         .tint(.accentColor)
