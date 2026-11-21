@@ -1,0 +1,76 @@
+# Sherry Chat — iOS CI
+#
+# Runs on a GitHub-hosted macOS runner because Sherry's own server is Linux
+# and has no Xcode. Its output is an UNSIGNED .ipa, packaged from an
+# unsigned archive and uploaded as a workflow artifact
+# (name: SherryChat-unsigned-ipa). There is no simulator build step:
+# Dolos tests on her own iPhone; only the real-device archive (the IPA)
+# is needed.
+#
+# v2 (self-dev-v2 branch): no swift-chat binary dependency any more —
+# hand-written SwiftUI + vendored FluidGroup swiftui-messaging-ui
+# (local package fluidgroup/). The xcode-27 runner stays: FluidGroup
+# needs Swift 6 and Xcode 27 is what the runners have.
+#
+# Telegram-style variant DISCONTINUED 2026-11-19 (Dolos: only our
+# iMessage app from now on) — the TG archive/upload steps were
+# deleted; this workflow builds the main app only.
+#
+# Unsigned means: no Apple Developer signing, no certificate, no provisioning
+# profile. It cannot be installed by tapping it or through the App Store.
+# To test on a real iPhone, sideload it with a tool that re-signs with your
+# own Apple ID (e.g. AltStore / Sideloadly / SideStore, free Apple ID works,
+# 7-day expiry). A signed IPA / TestFlight would need an Apple Developer
+# account and signing secrets — not set up yet; see planning/PLAN.md.
+name: iOS
+
+on:
+  push:
+    branches: [main, self-dev-v2]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build + unsigned IPA
+    # GitHub-hosted macOS runner. Xcode is selected explicitly below.
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select installed Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)
+          if [ -z "$XCODE" ]; then XCODE=$(ls -d /Applications/Xcode*.app | sort -V | tail -1); fi
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+
+      - name: Resolve Swift packages
+        run: xcodebuild -resolvePackageDependencies -project SherryChat.xcodeproj -scheme SherryChat
+
+      # NOTE: deliberately no simulator build step and no simulator
+      # download. Dolos tests on her own iPhone; only the real-device
+      # archive (the IPA) is needed.
+      - name: Archive for iOS device (unsigned)
+        run: |
+          xcodebuild archive \
+            -project SherryChat.xcodeproj \
+            -scheme SherryChat \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/SherryChat.xcarchive \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+          APP_PATH=$(ls -d build/SherryChat.xcarchive/Products/Applications/*.app)
+          echo "Archived app: $APP_PATH"
+          mkdir -p build/Payload
+          cp -R "$APP_PATH" build/Payload/
+          cd build && zip -r SherryChat-unsigned.ipa Payload
+          ls -lh SherryChat-unsigned.ipa
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: SherryChat-unsigned-ipa
+          path: build/SherryChat-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 7

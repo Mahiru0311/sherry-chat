@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Spike addition: upstream Dev project ships no shared scheme, so CI could
+  not select one. Minimal scheme, app target only; the MessagingUI product
+  comes from the local swiftui-messaging-ui package (see the
+  XCLocalSwiftPackageReference in project.pbxproj).
+-->
+<Scheme
+   LastUpgradeVersion = "2600"
+   version = "1.7">
+	<BuildAction
+		parallelizeBuildables = "YES"
+		buildImplicitDependencies = "YES"
+		runPostActionsOnFailure = "NO">
+		<BuildActionEntries>
+			<BuildActionEntry
+				buildForTesting = "YES"
+				buildForRunning = "YES"
+				buildForProfiling = "YES"
+				buildForArchiving = "YES"
+				buildForAnalyzing = "YES">
+				<BuildableReference
+					BuildableIdentifier = "primary"
+					BlueprintIdentifier = "3A0000000000000000000002"
+					BuildableName = "SherryChat.app"
+					BlueprintName = "SherryChat"
+					ReferencedContainer = "container:SherryChat.xcodeproj">
+				</BuildableReference>
+			</BuildActionEntry>
+		</BuildActionEntries>
+	</BuildAction>
+	<TestAction
+		buildConfiguration = "Debug"
+		selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+		selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+		shouldUseLaunchSchemeArgsEnv = "YES">
+		<Testables>
+		</Testables>
+	</TestAction>
+	<LaunchAction
+		buildConfiguration = "Debug"
+		selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+		selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+		launchStyle = "0"
+		useCustomWorkingDirectory = "NO"
+		ignoresPersistentStateOnLaunch = "NO"
+		debugDocumentVersioning = "YES"
+		debugServiceExtension = "internal"
+		allowLocationSimulation = "YES">
+		<BuildableProductRunnable
+			runnableDebuggingMode = "0">
+			<BuildableReference
+				BuildableIdentifier = "primary"
+				BlueprintIdentifier = "3A0000000000000000000002"
+				BuildableName = "SherryChat.app"
+				BlueprintName = "SherryChat"
+				ReferencedContainer = "container:SherryChat.xcodeproj">
+			</BuildableReference>
+		</BuildableProductRunnable>
+	</LaunchAction>
+	<ProfileAction
+		buildConfiguration = "Release"
+		shouldUseLaunchSchemeArgsEnv = "YES"
+		savedToolIdentifier = ""
+		useCustomWorkingDirectory = "NO"
+		debugDocumentVersioning = "YES">
+		<BuildableProductRunnable
+			runnableDebuggingMode = "0">
+			<BuildableReference
+				BuildableIdentifier = "primary"
+				BlueprintIdentifier = "3A0000000000000000000002"
+				BuildableName = "SherryChat.app"
+				BlueprintName = "SherryChat"
+				ReferencedContainer = "container:SherryChat.xcodeproj">
+			</BuildableReference>
+		</BuildableProductRunnable>
+	</ProfileAction>
+	<AnalyzeAction
+		buildConfiguration = "Debug">
+	</AnalyzeAction>
+	<ArchiveAction
+		buildConfiguration = "Release"
+		revealArchiveInOrganizer = "YES">
+	</ArchiveAction>
+</Scheme>
