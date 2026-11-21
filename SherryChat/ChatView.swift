@@ -38,8 +38,10 @@ struct ChatView: View {
 
     @State private var previewURL: URL?
     @State private var playingVideo: IdentifiableURL?
+    @Environment(ToolsStore.self) private var toolsStore
     @State private var showDetails = false
     @State private var showNewChat = false
+    @State private var showTools = false
     /// 附件出问题时给用户的一句明确提示（选不上 / 拷不动 / 保存失败），
     /// 不许悄悄丢附件。
     @State private var attachmentError: String?
@@ -444,8 +446,7 @@ struct ChatView: View {
                     onMicTap: toggleDictation,
                     onPickPhotos: { showPhotos = true },
                     onPickFiles: { showFiles = true },
-                    onTakePhoto: { showCamera = true },
-                    onTools: { showTools = true }
+                    onTakePhoto: { showCamera = true }
                 )
             }
 
