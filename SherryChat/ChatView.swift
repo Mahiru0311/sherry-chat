@@ -11,7 +11,6 @@ import UniformTypeIdentifiers
 /// iOS 26 原生 Scroll Edge Effect（渐变模糊）。
 struct ChatView: View {
     var onNewChat: () -> Void = {}
-    var onNavigationCollapse: () -> Void = {}
     @State private var conversation = Conversation()
     /// 个人页那份 AgentProfile（App 入口注入）：send() 传给
     /// Conversation，配齐了才走真 AI；没配齐走假回复。
@@ -295,7 +294,6 @@ struct ChatView: View {
                 // 跟底开关：离底 < 100pt 才跟，翻上去看历史时不抢滚动；
                 // 值没变就不写，免得每次滚动几何变化都触发一次 @State 赋值。
                 .onTiledScrollGeometryChange { geometry in
-                    if geometry.pointsFromBottom > 24 { onNavigationCollapse() }
                     let nearBottom = geometry.pointsFromBottom < 100
                     lastPointsFromBottom = geometry.pointsFromBottom
                     if scrollPosition.autoScrollsToBottomOnAppend != nearBottom {
@@ -656,7 +654,9 @@ struct ChatView: View {
     private var headerView: some View {
         ZStack {
             VStack(spacing: 4) {
-                avatarView(size: 58)
+                avatarView(size: 66)
+                    .offset(y: 10)
+                    .zIndex(1)
                 Text(profile.displayName)
                     .font(.headline.weight(.semibold))
                     .lineLimit(1)
@@ -675,6 +675,7 @@ struct ChatView: View {
                         .font(.system(size: 17, weight: .bold))
                         .frame(width: 42, height: 42)
                         .glassCircleFill()
+                        .offset(y: -18)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("新增聊天")
