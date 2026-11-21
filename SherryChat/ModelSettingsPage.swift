@@ -12,15 +12,22 @@ struct ModelSettingsPage: View {
 
     var body: some View {
         Form {
-            Section("服务渠道") {
+            Section {
                 Picker("预设", selection: $baseURL) {
-                    Text("自定义").tag(baseURL)
+                    Text("自定义").tag("")
                     Text("OpenAI").tag("https://api.openai.com")
                     Text("DeepSeek").tag("https://api.deepseek.com")
                     Text("OpenRouter").tag("https://openrouter.ai/api")
                 }
-                TextField("Base URL", text: $baseURL).textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
-            } footer: { Text("填写服务根地址；应用会处理兼容接口路径。") }
+                TextField("Base URL", text: $baseURL)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.URL)
+            } header: {
+                Text("服务渠道")
+            } footer: {
+                Text("填写服务根地址；应用会处理兼容接口路径。")
+            }
 
             Section("API 密钥") {
                 HStack {
