@@ -11,6 +11,7 @@ import UniformTypeIdentifiers
 /// iOS 26 原生 Scroll Edge Effect（渐变模糊）。
 struct ChatView: View {
     var onNewChat: () -> Void = {}
+    var onUserSent: (String) -> Void = { _ in }
     @State private var conversation = Conversation()
     /// 个人页那份 AgentProfile（App 入口注入）：send() 传给
     /// Conversation，配齐了才走真 AI；没配齐走假回复。
@@ -654,7 +655,7 @@ struct ChatView: View {
     private var headerView: some View {
         ZStack {
             VStack(spacing: 4) {
-                avatarView(size: 66)
+                avatarView(size: 72)
                     .offset(y: 10)
                     .zIndex(1)
                 Text(profile.displayName)
@@ -834,6 +835,7 @@ struct ChatView: View {
         if !failed.isEmpty {
             attachmentError = "以下附件没能存下来，已按原位置发出，重启手机后可能打不开：\(failed.joined(separator: "、"))。"
         }
+        onUserSent(trimmed)
         let messageID = UUID()
         // 回复态跟着这条消息走：发出去就清掉，预览栏立刻收起。
         let replyID = replyingTo
