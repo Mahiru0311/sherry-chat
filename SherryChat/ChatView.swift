@@ -733,7 +733,6 @@ struct ChatView: View {
         .padding(.horizontal, 12)
         .frame(maxWidth: .infinity)
         .frame(height: headerHeight)
-        .onTapGesture { showDetails = true }
     }
 
     /// 换头像 / 换名字进行中的提示栏（step 80）：52pt 高，
