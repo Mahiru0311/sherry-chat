@@ -5,7 +5,16 @@ struct AppShell: View {
     @State private var conversations: [ConversationPreview] = [.sample]
     @State private var chatSeed = UUID()
 
+    @ViewBuilder
     var body: some View {
+        if #available(iOS 26.0, *) {
+            nativeTabs.tabBarMinimizeBehavior(.onScrollDown)
+        } else {
+            nativeTabs
+        }
+    }
+
+    private var nativeTabs: some View {
         TabView(selection: $selection) {
             Tab("聊天", systemImage: "message.fill", value: .chat) {
                 ChatView(onNewChat: createNewChat).id(chatSeed)
@@ -20,7 +29,6 @@ struct AppShell: View {
             Tab("我的", systemImage: "person.crop.circle.fill", value: .me) { MeView() }
         }
         .tint(.accentColor)
-        .tabBarMinimizeBehavior(.onScrollDown)
     }
 
     private func createNewChat() {
