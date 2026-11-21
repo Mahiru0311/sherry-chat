@@ -12,7 +12,7 @@ struct ModelSettingsPage: View {
 
     var body: some View {
         Form {
-            Section {
+            Section("服务渠道") {
                 Picker("预设", selection: $baseURL) {
                     Text("自定义").tag("")
                     Text("OpenAI").tag("https://api.openai.com")
@@ -23,10 +23,9 @@ struct ModelSettingsPage: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.URL)
-            } header: {
-                Text("服务渠道")
-            } footer: {
                 Text("填写服务根地址；应用会处理兼容接口路径。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("API 密钥") {
