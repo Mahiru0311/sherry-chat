@@ -23,7 +23,6 @@ struct InputBar: View {
     var onPickPhotos: () -> Void
     var onPickFiles: () -> Void
     var onTakePhoto: () -> Void
-    var onTools: () -> Void = {}
 
     /// 量输入框高度用的两个数（见下面 textField）：
     /// 框宽（量文字区有多宽），和藏起来的量尺量出来的文字真高。
@@ -73,14 +72,6 @@ struct InputBar: View {
     private var inputRow: some View {
         HStack(spacing: ChatTheme.inputRowSpacing) {
             plusButton
-            Button(action: onTools) {
-                Image(systemName: "wand.and.stars")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.tint)
-                    .frame(width: 32, height: 40)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("工具与 Skills")
             textField
             // 对比版（Telegram）：发送/麦克风是框外右边一个蓝圆钮，
             // 不是框内贴着的按钮。

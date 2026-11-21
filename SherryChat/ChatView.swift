@@ -14,8 +14,6 @@ struct ChatView: View {
     /// 个人页那份 AgentProfile（App 入口注入）：send() 传给
     /// Conversation，配齐了才走真 AI；没配齐走假回复。
     @Environment(AgentProfile.self) private var profile
-    @Environment(ToolsStore.self) private var toolsStore
-    @State private var showTools = false
     /// 状态栏高度（step 85）：顶栏材质的高 = 顶栏内容高 +
     /// 这份高度，不然材质在 90pt 就断了、头像和名字牌落在外面（图 45）。
     /// SwiftUI 没有 `\.safeAreaInsets` 这个环境值（CI 红过一次），
@@ -41,6 +39,7 @@ struct ChatView: View {
     @State private var previewURL: URL?
     @State private var playingVideo: IdentifiableURL?
     @State private var showDetails = false
+    @State private var showNewChat = false
     /// 附件出问题时给用户的一句明确提示（选不上 / 拷不动 / 保存失败），
     /// 不许悄悄丢附件。
     @State private var attachmentError: String?
@@ -224,6 +223,7 @@ struct ChatView: View {
             // 联系人卡片 sheet 废了，换成全屏的个人页。
             // onDismiss：记忆页点了“更换头像/更换名称”回来时
             // （step 80），输入框上面显示着要换什么，直接弹起键盘。
+            .sheet(isPresented: $showNewChat) { NewChatView { _ in showNewChat = false } }
             .fullScreenCover(isPresented: $showDetails, onDismiss: {
                 if profile.pendingAvatarChange || profile.pendingNameChange {
                     inputFocused = true
@@ -232,10 +232,7 @@ struct ChatView: View {
                 ProfileView()
                     .environment(toolsStore)
             }
-            .sheet(isPresented: $showTools) {
-                ToolPickerSheet()
-                    .environment(toolsStore)
-            }
+
     }
 
     private var chatStack: some View {
@@ -673,7 +670,7 @@ struct ChatView: View {
         ZStack {
             Button { showDetails = true } label: {
                 VStack(spacing: 3) {
-                    avatarView(size: 34)
+                    avatarView(size: 52)
                     HStack(spacing: 3) {
                         Text(profile.displayName)
                             .font(.subheadline.weight(.semibold))
@@ -693,14 +690,14 @@ struct ChatView: View {
             HStack {
                 Spacer()
                 HStack(spacing: 8) {
-                    Button { showTools = true } label: {
-                        Image(systemName: "wand.and.stars")
-                            .font(.system(size: 16, weight: .semibold))
+                    Button { showNewChat = true } label: {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 16, weight: .bold))
                             .frame(width: 38, height: 38)
                             .glassCircleFill()
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("工具与 Skills")
+                    .accessibilityLabel("新增聊天")
                     Button { showDetails = true } label: {
                         Image(systemName: "info")
                             .font(.system(size: 16, weight: .bold))

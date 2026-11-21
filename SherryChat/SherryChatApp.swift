@@ -13,7 +13,7 @@ struct SherryChatApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ChatView()
+            AppShell()
                 .environment(profile)
                 .environment(toolsStore)
                 .task {
