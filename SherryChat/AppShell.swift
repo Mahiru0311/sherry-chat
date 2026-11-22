@@ -21,6 +21,25 @@ final class ConversationStore {
 
     func select(_ preview: ConversationPreview) { activeID = preview.id }
 
+    func titleTranscript(for id: UUID) -> [String] {
+        previews.first(where: { $0.id == id })?.turnSeeds ?? []
+    }
+
+    func shouldGenerateTitle(for id: UUID) -> Bool {
+        guard let item = previews.first(where: { $0.id == id }) else { return false }
+        return !item.titleLocked && item.titleSource != "model" && !item.turnSeeds.isEmpty
+    }
+
+    func applyGeneratedTitle(_ title: String, to id: UUID, expectedSeeds: [String]) {
+        guard !title.isEmpty,
+              let index = previews.firstIndex(where: { $0.id == id }),
+              previews[index].turnSeeds == expectedSeeds,
+              !previews[index].titleLocked else { return }
+        previews[index].name = title
+        previews[index].titleSource = "model"
+        save()
+    }
+
     func messages(for id: UUID) -> [ChatMessage] {
         previews.first(where: { $0.id == id })?.messages.map(\.chatMessage) ?? []
     }
@@ -44,7 +63,10 @@ final class ConversationStore {
         if previews[index].turnSeeds.count < 3 { previews[index].turnSeeds.append(clean) }
         previews[index].lastMessage = clean
         previews[index].date = .now
-        previews[index].name = title(from: previews[index].turnSeeds)
+        if !previews[index].titleLocked {
+            previews[index].name = title(from: previews[index].turnSeeds)
+            previews[index].titleSource = "local"
+        }
         previews.sort { $0.date > $1.date }
         save()
     }
@@ -65,15 +87,20 @@ final class ConversationStore {
 }
 
 struct AppShell: View {
+    @Environment(AgentProfile.self) private var profile
     @State private var selection: RootTab = .chat
     @State private var store = ConversationStore()
+    @State private var titleTask: Task<Void, Never>?
 
     var body: some View {
         TabView(selection: $selection) {
             Tab("聊天", systemImage: "message.fill", value: .chat) {
                 ChatView(
                     initialMessages: store.messages(for: store.activeID),
-                    onMessagesChanged: { store.saveMessages($0, for: store.activeID) },
+                    onMessagesChanged: { messages in
+                        store.saveMessages(messages, for: store.activeID)
+                        scheduleModelTitleIfNeeded(conversationID: store.activeID)
+                    },
                     onNewChat: { store.newDraft() },
                     onUserSent: { store.absorbUserMessage($0, for: store.activeID) }
                 )
@@ -86,15 +113,44 @@ struct AppShell: View {
             Tab("我的", systemImage: "person.crop.circle.fill", value: .me) { MeView() }
         }
         .tint(.accentColor)
-        .modifier(NativeTabMinimizeModifier())
+        .modifier(NativeTabMinimizeModifier(selection: selection))
+    }
+
+    private func scheduleModelTitleIfNeeded(conversationID: UUID) {
+        guard store.shouldGenerateTitle(for: conversationID),
+              profile.isConfigured,
+              let key = profile.apiKey() else { return }
+        let seeds = store.titleTranscript(for: conversationID)
+        guard !seeds.isEmpty else { return }
+        titleTask?.cancel()
+        titleTask = Task {
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            if let title = try? await OpenAIClient().generateShortTitle(
+                baseURL: profile.normalizedBaseURL,
+                model: profile.modelName,
+                apiKey: key,
+                transcript: seeds
+            ) {
+                store.applyGeneratedTitle(title, to: conversationID, expectedSeeds: seeds)
+            }
+        }
     }
 }
 
 private struct NativeTabMinimizeModifier: ViewModifier {
+    let selection: RootTab
+
     @ViewBuilder
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
-            content.tabBarMinimizeBehavior(.onScrollDown)
+            // 聊天内容从底部开始，查看历史的主要手势方向与普通 List 相反。
+            // Apple 对 bottom-aligned scroll view 推荐 onScrollUp。
+            if selection == .chat {
+                content.tabBarMinimizeBehavior(.onScrollUp)
+            } else {
+                content.tabBarMinimizeBehavior(.onScrollDown)
+            }
         } else {
             content
         }
@@ -135,6 +191,8 @@ struct ConversationPreview: Identifiable, Hashable, Codable {
     var isDraft: Bool
     var turnSeeds: [String]
     var messages: [StoredMessage]
+    var titleSource: String
+    var titleLocked: Bool
 
     init(
         id: UUID = UUID(),
@@ -143,7 +201,9 @@ struct ConversationPreview: Identifiable, Hashable, Codable {
         date: Date = .now,
         isDraft: Bool = false,
         turnSeeds: [String] = [],
-        messages: [StoredMessage] = []
+        messages: [StoredMessage] = [],
+        titleSource: String = "placeholder",
+        titleLocked: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -152,11 +212,13 @@ struct ConversationPreview: Identifiable, Hashable, Codable {
         self.isDraft = isDraft
         self.turnSeeds = turnSeeds
         self.messages = messages
+        self.titleSource = titleSource
+        self.titleLocked = titleLocked
     }
 
     static let sample = ConversationPreview(name: "Sherry", messages: Conversation.sampleMessages().map(StoredMessage.init))
 
-    private enum CodingKeys: String, CodingKey { case id, name, lastMessage, date, isDraft, turnSeeds, messages }
+    private enum CodingKeys: String, CodingKey { case id, name, lastMessage, date, isDraft, turnSeeds, messages, titleSource, titleLocked }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
@@ -166,6 +228,8 @@ struct ConversationPreview: Identifiable, Hashable, Codable {
         isDraft = try c.decode(Bool.self, forKey: .isDraft)
         turnSeeds = try c.decodeIfPresent([String].self, forKey: .turnSeeds) ?? []
         messages = try c.decodeIfPresent([StoredMessage].self, forKey: .messages) ?? []
+        titleSource = try c.decodeIfPresent(String.self, forKey: .titleSource) ?? "local"
+        titleLocked = try c.decodeIfPresent(Bool.self, forKey: .titleLocked) ?? false
     }
 }
 

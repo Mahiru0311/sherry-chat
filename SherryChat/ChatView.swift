@@ -380,10 +380,18 @@ struct ChatView: View {
                 // 变成普通 some View、后面的 FluidGroup 修饰器
                 // 就找不到了——必须等链走完、类型已经丢了再挂。
                 .onChange(of: conversation.messages.count) { _, _ in
-                    if isAwayFromBottom,
-                       let last = conversation.messages.last,
-                       last.sender != .me {
-                        unreadCount += 1
+                    guard let last = conversation.messages.last else { return }
+                    if last.sender != .me {
+                        if isAwayFromBottom {
+                            unreadCount += 1
+                        } else {
+                            // 对方新消息 append 后由列表完成布局，再让 FluidGroup
+                            // 的 spring 跟到底部；用户主动翻历史时不抢滚动。
+                            Task { @MainActor in
+                                await Task.yield()
+                                scrollPosition.scrollTo(edge: .bottom, animated: true)
+                            }
+                        }
                     }
                 }
                 // 流式跟滑（step 79，step 83 改过，step 84 再改）：
@@ -670,20 +678,24 @@ struct ChatView: View {
     /// 头像压名字牌那 8pt overlap 没动。
     private var headerView: some View {
         ZStack {
-            VStack(spacing: 4) {
-                avatarView(size: 72)
-                    .offset(y: 3)
+            VStack(spacing: 0) {
+                avatarView(size: 74)
+                    .offset(y: 8)
                     .zIndex(1)
-                Text(profile.displayName)
-                    .font(.headline.weight(.semibold))
-                    .lineLimit(1)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 5)
-                    .glassCapsuleFill()
-                Text(conversation.isTyping ? "正在输入…" : "在线")
-                    .font(.caption2)
-                    .foregroundStyle(conversation.isTyping ? Color.secondary : Color.green)
+                VStack(spacing: 1) {
+                    Text(profile.displayName)
+                        .font(.headline.weight(.semibold))
+                        .lineLimit(1)
+                    Text(conversation.isTyping ? "正在输入…" : "在线")
+                        .font(.caption2)
+                        .foregroundStyle(conversation.isTyping ? Color.secondary : Color.green)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 7)
+                .padding(.bottom, 5)
+                .glassCapsuleFill()
             }
+            .offset(y: -9)
 
             HStack {
                 Spacer()

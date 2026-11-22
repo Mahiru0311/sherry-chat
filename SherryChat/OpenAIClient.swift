@@ -48,6 +48,30 @@ actor OpenAIClient {
         self.session = session
     }
 
+    func generateShortTitle(
+        baseURL: String,
+        model: String,
+        apiKey: String,
+        transcript: [String]
+    ) async throws -> String {
+        let joined = transcript.prefix(6).joined(separator: "\n")
+        let result = try await completeChat(
+            baseURL: baseURL,
+            model: model,
+            apiKey: apiKey,
+            messages: [
+                ChatAPIMessage(role: "system", content: "根据对话生成一个8到16个汉字的中文标题。只输出标题，不加引号、标点、解释。"),
+                ChatAPIMessage(role: "user", content: joined),
+            ]
+        )
+        let clean = result
+            .replacingOccurrences(of: "\"", with: "")
+            .replacingOccurrences(of: "《", with: "")
+            .replacingOccurrences(of: "》", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        return String(clean.prefix(24))
+    }
+
     func completeChat(
         baseURL: String,
         model: String,
