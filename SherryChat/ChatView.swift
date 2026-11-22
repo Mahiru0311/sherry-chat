@@ -10,9 +10,24 @@ import UniformTypeIdentifiers
 /// 滚动引擎 + 自己画的输入栏。顶栏玻璃只属于名字牌，顶栏上面是
 /// iOS 26 原生 Scroll Edge Effect（渐变模糊）。
 struct ChatView: View {
+    var initialMessages: [ChatMessage] = []
+    var onMessagesChanged: ([ChatMessage]) -> Void = { _ in }
     var onNewChat: () -> Void = {}
     var onUserSent: (String) -> Void = { _ in }
-    @State private var conversation = Conversation()
+    @State private var conversation: Conversation
+
+    init(
+        initialMessages: [ChatMessage] = [],
+        onMessagesChanged: @escaping ([ChatMessage]) -> Void = { _ in },
+        onNewChat: @escaping () -> Void = {},
+        onUserSent: @escaping (String) -> Void = { _ in }
+    ) {
+        self.initialMessages = initialMessages
+        self.onMessagesChanged = onMessagesChanged
+        self.onNewChat = onNewChat
+        self.onUserSent = onUserSent
+        _conversation = State(initialValue: Conversation(messages: initialMessages))
+    }
     /// 个人页那份 AgentProfile（App 入口注入）：send() 传给
     /// Conversation，配齐了才走真 AI；没配齐走假回复。
     @Environment(AgentProfile.self) private var profile
@@ -155,6 +170,9 @@ struct ChatView: View {
 
     var body: some View {
         pickersView
+            .onChange(of: conversation.messages) { _, messages in
+                onMessagesChanged(messages)
+            }
             .onChange(of: dictation.liveText) { _, text in
                 inputText = dictationBaseText + text
             }
@@ -654,7 +672,7 @@ struct ChatView: View {
         ZStack {
             VStack(spacing: 4) {
                 avatarView(size: 72)
-                    .offset(y: 10)
+                    .offset(y: 3)
                     .zIndex(1)
                 Text(profile.displayName)
                     .font(.headline.weight(.semibold))

@@ -21,7 +21,7 @@ struct MeView: View {
                         .frame(maxWidth: .infinity).padding(.vertical, 16)
                         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
                     }.buttonStyle(.plain)
-                    menu("插件", "puzzlepiece.extension.fill", badge: "\(tools.enabledTools.count)") { route = .plugins }
+                    menu("插件", "puzzlepiece.extension.fill", badge: nil) { route = .plugins }
                     menu("记忆", "brain.head.profile", badge: "\(profile.memories.count)") { route = .memory }
                     menu("人格", "heart.text.square.fill", badge: profile.soulDraft == nil ? nil : "待确认") { route = .soul }
                     menu("模型", "cpu", badge: profile.modelName.isEmpty ? "未配置" : profile.modelName) { route = .model }

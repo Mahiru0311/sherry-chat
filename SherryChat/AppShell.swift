@@ -21,6 +21,20 @@ final class ConversationStore {
 
     func select(_ preview: ConversationPreview) { activeID = preview.id }
 
+    func messages(for id: UUID) -> [ChatMessage] {
+        previews.first(where: { $0.id == id })?.messages.map(\.chatMessage) ?? []
+    }
+
+    func saveMessages(_ messages: [ChatMessage], for id: UUID) {
+        guard let index = previews.firstIndex(where: { $0.id == id }) else { return }
+        previews[index].messages = messages.map(StoredMessage.init)
+        if let last = messages.last {
+            previews[index].lastMessage = last.snippet
+            previews[index].date = last.sentAt
+        }
+        save()
+    }
+
     /// 首句即时命名，前 3 条用户消息持续优化；后续可无缝替换成 JSON Schema 模型标题。
     func absorbUserMessage(_ text: String, for id: UUID) {
         guard let index = previews.firstIndex(where: { $0.id == id }) else { return }
@@ -57,7 +71,13 @@ struct AppShell: View {
     var body: some View {
         TabView(selection: $selection) {
             Tab("聊天", systemImage: "message.fill", value: .chat) {
-                ChatView(onNewChat: { store.newDraft() }, onUserSent: { store.absorbUserMessage($0, for: store.activeID) }).id(store.activeID)
+                ChatView(
+                    initialMessages: store.messages(for: store.activeID),
+                    onMessagesChanged: { store.saveMessages($0, for: store.activeID) },
+                    onNewChat: { store.newDraft() },
+                    onUserSent: { store.absorbUserMessage($0, for: store.activeID) }
+                )
+                .id(store.activeID)
             }
             Tab("会话", systemImage: "bubble.left.and.bubble.right.fill", value: .conversations) {
                 ConversationListView(previews: store.previews, onSelect: { store.select($0); selection = .chat }, onDelete: store.delete)
@@ -66,65 +86,87 @@ struct AppShell: View {
             Tab("我的", systemImage: "person.crop.circle.fill", value: .me) { MeView() }
         }
         .tint(.accentColor)
-        .modifier(NativeTabMinimizeModifier(selection: selection))
+        .modifier(NativeTabMinimizeModifier())
     }
 }
 
 private struct NativeTabMinimizeModifier: ViewModifier {
-    let selection: RootTab
-
     @ViewBuilder
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
-            content
-                .tabBarMinimizeBehavior(.onScrollDown)
-                // Apple Music 的稳定体验来自 bottom accessory：展开时位于
-                // Tab Bar 上方，收缩时自动并入栏内；布局与动画全由系统驱动。
-                .tabViewBottomAccessory {
-                    TabBarStatusAccessory(selection: selection)
-                }
+            content.tabBarMinimizeBehavior(.onScrollDown)
         } else {
             content
         }
     }
 }
 
-@available(iOS 26.0, *)
-private struct TabBarStatusAccessory: View {
-    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
-    let selection: RootTab
+enum RootTab: Hashable { case chat, conversations, mood, me }
 
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: accessoryIcon)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.tint)
-            if placement != .inline {
-                Text(accessoryText)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-            }
-        }
-        .padding(.horizontal, placement == .inline ? 6 : 12)
-        .accessibilityLabel(accessoryText)
+struct StoredMessage: Codable, Hashable {
+    var id: UUID
+    var text: String
+    var isMine: Bool
+    var sentAt: Date
+
+    init(_ message: ChatMessage) {
+        id = message.id
+        text = message.text
+        isMine = message.sender == .me
+        sentAt = message.sentAt
     }
 
-    private var accessoryIcon: String {
-        switch selection { case .chat: "message.fill"; case .conversations: "clock.fill"; case .mood: "sparkles"; case .me: "person.fill" }
-    }
-    private var accessoryText: String {
-        switch selection { case .chat: "与 Sherry 对话中"; case .conversations: "查看历史会话"; case .mood: "探索共同空间"; case .me: "管理 Agent" }
+    var chatMessage: ChatMessage {
+        ChatMessage(
+            id: id,
+            text: text,
+            sender: isMine ? .me : .sherry,
+            sentAt: sentAt,
+            status: isMine ? .read : nil
+        )
     }
 }
 
-enum RootTab: Hashable { case chat, conversations, mood, me }
-
 struct ConversationPreview: Identifiable, Hashable, Codable {
-    let id: UUID; var name: String; var lastMessage: String; var date: Date; var isDraft: Bool; var turnSeeds: [String]
-    init(id: UUID = UUID(), name: String, lastMessage: String = "开始一段新的对话", date: Date = .now, isDraft: Bool = false, turnSeeds: [String] = []) { self.id=id; self.name=name; self.lastMessage=lastMessage; self.date=date; self.isDraft=isDraft; self.turnSeeds=turnSeeds }
-    static let sample = ConversationPreview(name: "Sherry")
+    let id: UUID
+    var name: String
+    var lastMessage: String
+    var date: Date
+    var isDraft: Bool
+    var turnSeeds: [String]
+    var messages: [StoredMessage]
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        lastMessage: String = "开始一段新的对话",
+        date: Date = .now,
+        isDraft: Bool = false,
+        turnSeeds: [String] = [],
+        messages: [StoredMessage] = []
+    ) {
+        self.id = id
+        self.name = name
+        self.lastMessage = lastMessage
+        self.date = date
+        self.isDraft = isDraft
+        self.turnSeeds = turnSeeds
+        self.messages = messages
+    }
+
+    static let sample = ConversationPreview(name: "Sherry", messages: Conversation.sampleMessages().map(StoredMessage.init))
+
+    private enum CodingKeys: String, CodingKey { case id, name, lastMessage, date, isDraft, turnSeeds, messages }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        lastMessage = try c.decode(String.self, forKey: .lastMessage)
+        date = try c.decode(Date.self, forKey: .date)
+        isDraft = try c.decode(Bool.self, forKey: .isDraft)
+        turnSeeds = try c.decodeIfPresent([String].self, forKey: .turnSeeds) ?? []
+        messages = try c.decodeIfPresent([StoredMessage].self, forKey: .messages) ?? []
+    }
 }
 
 struct ConversationListView: View {
