@@ -66,12 +66,57 @@ struct AppShell: View {
             Tab("我的", systemImage: "person.crop.circle.fill", value: .me) { MeView() }
         }
         .tint(.accentColor)
-        .modifier(NativeTabMinimizeModifier())
+        .modifier(NativeTabMinimizeModifier(selection: selection))
     }
 }
 
 private struct NativeTabMinimizeModifier: ViewModifier {
-    @ViewBuilder func body(content: Content) -> some View { if #available(iOS 26.0, *) { content.tabBarMinimizeBehavior(.onScrollDown) } else { content } }
+    let selection: RootTab
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .tabBarMinimizeBehavior(.onScrollDown)
+                // Apple Music 的稳定体验来自 bottom accessory：展开时位于
+                // Tab Bar 上方，收缩时自动并入栏内；布局与动画全由系统驱动。
+                .tabViewBottomAccessory {
+                    TabBarStatusAccessory(selection: selection)
+                }
+        } else {
+            content
+        }
+    }
+}
+
+@available(iOS 26.0, *)
+private struct TabBarStatusAccessory: View {
+    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
+    let selection: RootTab
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: accessoryIcon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.tint)
+            if placement != .inline {
+                Text(accessoryText)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(.horizontal, placement == .inline ? 6 : 12)
+        .accessibilityLabel(accessoryText)
+    }
+
+    private var accessoryIcon: String {
+        switch selection { case .chat: "message.fill"; case .conversations: "clock.fill"; case .mood: "sparkles"; case .me: "person.fill" }
+    }
+    private var accessoryText: String {
+        switch selection { case .chat: "与 Sherry 对话中"; case .conversations: "查看历史会话"; case .mood: "探索共同空间"; case .me: "管理 Agent" }
+    }
 }
 
 enum RootTab: Hashable { case chat, conversations, mood, me }
